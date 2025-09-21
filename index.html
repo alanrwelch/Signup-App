@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <title>Springfield Seniors Signup</title>
+  <style>
+    body {
+      transform: scale(0.75);
+      transform-origin: top left;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 700px;
+      margin: auto;
+      background-color: #ADD8E6;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .image-container {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .image-container img {
+      max-height: 100px;
+      margin: 0 15px;
+      vertical-align: middle;
+    }
+    #nameSelect {
+      width: 60%;
+      padding: 10px;
+      font-size: 1.2em;
+      margin-bottom: 20px;
+    }
+    .monthHeader {
+      font-weight: bold;
+      font-size: 1.3em;
+      margin-top: 25px;
+      margin-bottom: 10px;
+      border-bottom: 2px solid #004080;
+      padding-bottom: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #cceeff;
+    }
+    td label {
+      margin-left: 6px;
+    }
+    #saveBtn {
+      font-weight: bold;
+      font-size: 1.2em;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    #btnSpinner, #topSpinner {
+      display: none;
+      border-radius: 50%;
+      width: 14px;
+      height: 14px;
+      animation: spin 0.9s linear infinite;
+      vertical-align: middle;
+    }
+    #btnSpinner {
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #333;
+      margin-left: 10px;
+    }
+    #topSpinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid purple;
+      margin-left: 8px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    #buttonBar {
+      margin: 20px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+    }
+    #buttonBar button {
+      padding: 8px 14px;
+      font-size: 1em;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #statusMessage {
+      font-weight: bold;
+      text-align: center;
+      color: darkgreen;
+      margin: 10px 0 20px;
+      transition: opacity 0.5s ease;
+    }
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+    .blink {
+      animation: blink 1s step-start infinite;
+    }
+  </style>
+</head>
+<body>
+
+<div style="text-align: center;">
+  <h1>Springfield Senior Signups</h1>
+  <div style="font-weight: bold; color: blue; margin-top: -10px;">V 2.</div>
+</div>
+
+<!-- Blank vertical spacer -->
+<div style="height: 1em;"></div>
+
+<div class="image-container">
+  <img src="https://live.staticflickr.com/65535/54259105499_43c986c7ea_z.jpg" alt="GoogleGolf Scoring System Logo">
+  <img src="https://live.staticflickr.com/65535/54033042787_0126e057cd_w_d.jpg" alt="BT Logo">
+</div>
+
+
+<div id="instructions" style="margin: 1em 0; font-size: 1.1em;">
+  <b>1. Select your name. </b><br> 
+  <b>2. To "SIGNUP" for a day to play,</b> check the box for that day(s) play. <br> 
+  <b>3. To "SIGNOUT- Cancel a SIGNUP"</b>, uncheck the box for that day(s) to cancel. <br>
+  <b>4. To Save Your Selections & Email Them</b>, click the <b>Save & Email </b> button at the bottom. <br><br>
+
+  <span style="color: red; font-weight: bold; display: block; padding-left: 1.5em;">
+    For Monday play, signups/signouts must be in by the Saturday before 2pm!<br>
+    For Wednesday play, signup/signouts must be in by the Monday before 2pm!
+  </span><br>
+
+  You can always re-do your selections over time; the last submission is what is stored.<br><br>
+  <p><b>For last minute changes PAST THE DEADLINES</b> (sickness/etc.)-- ASAP email<br>
+    <span style="display: block; padding-left: 1.1em;">
+      Ken: kendunnett@comporium.net <br>
+      Alan: welch_misc@yahoo.com
+    </span>
+  </p>
+</div>
+
+<select id="nameSelect">
+  <option value="" disabled selected>Select Name</option>
+</select>
+
+<div id="topStatusMessage" style="color: purple; margin-bottom: 10px;">
+  <span id="topStatusText"></span><span id="topSpinner"></span>
+</div>
+
+<div id="buttonBar">
+  <button onclick="checkAllBoxesByType('all')">Check All Days</button>
+  <button onclick="checkAllBoxesByType('M')">Check All Mon.</button>
+  <button onclick="checkAllBoxesByType('W')">Check All Wedn.</button>
+  <button onclick="uncheckAllBoxes()">Uncheck All</button>
+</div>
+
+<div id="datesGrid"></div>
+
+<button id="saveBtn" onclick="saveCurrentSelections()">
+  Save & Email <span id="btnSpinner"></span>
+</button>
+
+<div id="bottomStatusMessage" style="color: purple; margin-top: 8px; font-size: 1.5em;"></div>
+
+
+
+<script>
+const nameSelect = document.getElementById('nameSelect');
+const datesGrid = document.getElementById('datesGrid');
+const topText = document.getElementById('topStatusText');
+const spinner = document.getElementById('topSpinner');
+
+let currentName = null;
+let allDatesByMonth = {};
+let serverCountsGlobal = {};
+let limitedDays = {
+  "09/22/2025": 36,
+  "09/24/2025": 36
+};
+
+const badDates = [
+  "09/01/2025"
+  ];
+
+/**
+const badDates = [
+  "09/01/2025",
+  "09/15/2025",
+  "10/06/2025",
+  "10/20/2025"
+];  
+*/
+
+// Ensure limited days note container exists
+let limitedDaysNote = document.getElementById('limitedDaysNote');
+if(!limitedDaysNote){
+  limitedDaysNote = document.createElement('div');
+  limitedDaysNote.id = 'limitedDaysNote';
+  limitedDaysNote.style.textAlign = 'center';
+  limitedDaysNote.style.marginBottom = '12px';
+  datesGrid.parentNode.insertBefore(limitedDaysNote, datesGrid);
+}
+
+// Convert "MM/DD/YYYY" → JS Date (midnight)
+function parseMDYDate(mdyStr) {
+  if (!mdyStr) return null;
+  const [mm, dd, yyyy] = mdyStr.split('/').map(Number);
+  const d = new Date(yyyy, mm - 1, dd);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+// Convert Date → "MM/DD/YYYY"
+function formatMDY(date) {
+  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+  const d = date.getDate().toString().padStart(2, '0');
+  const y = date.getFullYear();
+  return `${m}/${d}/${y}`;
+}
+
+// Current time in EST
+function getNowEST() {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+}
+
+// ISO week number
+function getISOWeekNumber(date) {
+  const tmp = new Date(date);
+  tmp.setHours(0,0,0,0);
+  tmp.setDate(tmp.getDate() + 3 - ((tmp.getDay() + 6) % 7));
+  const week1 = new Date(tmp.getFullYear(), 0, 4);
+  return 1 + Math.round(((tmp - week1)/86400000 - 3 + ((week1.getDay()+6)%7))/7);
+}
+
+// Render/update limited days note dynamically
+function renderLimitedDaysNote(serverCounts) {
+  console.log("🔹 Rendering limited days note with serverCounts:", serverCounts);
+
+  const nowEST = getNowEST();
+
+  // Remove dates past cutoff from limitedDays
+  for (const date in limitedDays) {
+    const dateObj = parseMDYDate(date);
+
+    // Cutoff = two days before at 2pm EST
+    const cutoff = new Date(dateObj);
+    cutoff.setDate(cutoff.getDate() - 2);
+    cutoff.setHours(14, 0, 0, 0);
+
+    if (nowEST >= cutoff) {
+      console.log(`❌ Removing expired limited day: ${date} (cutoff was ${cutoff})`);
+      delete limitedDays[date];
+    }
+  }
+
+  let listHtml = '';
+  if (Object.keys(limitedDays).length > 0) {
+    listHtml = Object.entries(limitedDays).map(([date, limit]) => {
+      const currentCount = serverCounts[date] || 0;
+      console.log(`   • Date: ${date}, Limit: ${limit}, Server Count: ${currentCount}`);
+      return `<p style="margin:2px 0; color:red; font-weight:bold;">
+                ${date}: limit ${limit} players (current: <span style="color:black">${currentCount}</span>)
+              </p>`;
+    }).join('');
+  } else {
+    listHtml = `<p style="color:gray; font-style:italic; margin:2px 0;">(none currently set)</p>`;
+  }
+
+  limitedDaysNote.innerHTML = `
+    <h3 style="color:red; font-size:1.4em; font-weight:bold; margin-bottom:4px;">Limited Player Days:</h3>
+    <p style="font-size:1.1em; margin:4px 0;">These checkboxes will be disabled once the limit is reached.</p>
+    ${listHtml}
+  `;
+}
+
+function renderDatesTable(signedUpDates = [], serverCounts = {}) {
+  datesGrid.innerHTML = '';
+
+  const nowEST = getNowEST();
+
+  const monthNames = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+  ];
+
+  // Determine 3 months to display based on current date + 2 days
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const minDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2);
+
+  const monthsToShow = [];
+  for (let i = 0; i < 3; i++) {
+    const futureDate = new Date(minDate.getFullYear(), minDate.getMonth() + i, 1);
+    monthsToShow.push(monthNames[futureDate.getMonth()]);
+  }
+
+  monthsToShow.forEach(monthName => {
+    const monthDatesRaw = allDatesByMonth[monthName];
+    if (!monthDatesRaw) return;
+
+    // Filter dates after minDate (2 days in future) and sort
+    const monthDates = monthDatesRaw
+      .filter(d => parseMDYDate(d.date) >= minDate)
+      .sort((a,b) => parseMDYDate(a.date) - parseMDYDate(b.date));
+
+    if (monthDates.length === 0) return;
+
+    // Month header
+    const monthHeader = document.createElement('div');
+    monthHeader.className = 'monthHeader';
+    monthHeader.textContent = monthName;
+    datesGrid.appendChild(monthHeader);
+
+    // Table setup
+    const table = document.createElement('table');
+    table.innerHTML = `<thead><tr><th>Monday</th><th>Wednesday</th></tr></thead>`;
+    const tbody = document.createElement('tbody');
+
+    // Group dates by ISO week
+    const weeksMap = new Map();
+    monthDates.forEach(d => {
+      const dateObj = parseMDYDate(d.date);
+      const weekNum = getISOWeekNumber(dateObj);
+      const tmpDate = new Date(dateObj);
+      tmpDate.setHours(0,0,0,0);
+      tmpDate.setDate(tmpDate.getDate() + 3 - ((tmpDate.getDay() + 6) % 7));
+      const weekKey = `${tmpDate.getFullYear()}-${String(weekNum).padStart(2,'0')}`;
+      if (!weeksMap.has(weekKey)) weeksMap.set(weekKey, {});
+      weeksMap.get(weekKey)[d.type] = d;
+    });
+
+    // Render each week
+    [...weeksMap.keys()].sort().forEach(weekKey => {
+      const week = weeksMap.get(weekKey);
+      const tr = document.createElement('tr');
+
+      ['M','W'].forEach(type => {
+        const td = document.createElement('td');
+        if (week[type]) {
+          const date = week[type].date;
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.dataset.date = date;
+          cb.dataset.type = type;
+          cb.checked = signedUpDates.includes(date);
+
+          // Bad dates styling
+          if (badDates.includes(date)) {
+            cb.disabled = true;
+            cb.style.accentColor = 'black';
+            td.style.backgroundColor = 'black';
+            td.style.color = 'white';
+          }
+
+          // Limited days check
+          const limit = limitedDays[date];
+          const current = serverCounts[date] || 0;
+          if (limit && current >= limit && !cb.checked) {
+            cb.disabled = true;
+            cb.style.accentColor = 'gray';
+          }
+
+          td.textContent = date + ' ';
+          td.appendChild(cb);
+        }
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    datesGrid.appendChild(table);
+  });
+}
+
+
+
+// Check/uncheck helpers
+function checkAllBoxesByType(type) {
+  datesGrid.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    if (!cb.disabled && (type==='all' || cb.dataset.type===type)) cb.checked=true;
+  });
+}
+function uncheckAllBoxes() {
+  datesGrid.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    if (!cb.disabled) cb.checked=false;
+  });
+}
+
+// Status display
+function showStatus(message,duration=4000,isError=false,elementId='statusMessage') {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  el.textContent = message;
+  el.style.color = isError ? 'red' : 'purple';
+  el.style.display = 'block';
+  if (el.hideTimeout) clearTimeout(el.hideTimeout);
+  if (duration>0) el.hideTimeout = setTimeout(()=>{ el.textContent=''; el.style.display='none'; }, duration);
+}
+
+// Save button
+function saveCurrentSelections() {
+  if (!currentName) { showStatus("Please select your name first.",30000,true,"topStatusMessage"); return; }
+  const saveBtn = document.getElementById('saveBtn');
+  const spinner = document.getElementById('btnSpinner');
+  const selectedDates = Array.from(datesGrid.querySelectorAll('input[type="checkbox"]:checked')).map(cb=>({date:cb.dataset.date,signedUp:true}));
+
+  if (!selectedDates.length && !confirm("⚠️ You have not selected any dates to play golf.\nDo you still want to save?")) return;
+
+  spinner.style.display='inline-block'; saveBtn.disabled=true;
+  function finish(){ spinner.style.display='none'; saveBtn.disabled=false; }
+
+  google.script.run
+    .withSuccessHandler(r => { 
+      showStatus(r.message||"Selections saved & emailed successfully.",0,false,"bottomStatusMessage"); 
+      finish(); 
+      google.script.run.withSuccessHandler(counts => {
+        serverCountsGlobal = counts;
+        renderLimitedDaysNote(serverCountsGlobal);
+        renderDatesTable(Array.from(datesGrid.querySelectorAll('input[type="checkbox"]:checked')).map(cb=>cb.dataset.date), serverCountsGlobal);
+      }).getServerCounts();
+    })
+    .withFailureHandler(e => { showStatus("Error saving selections: "+e.message,4000,true,"bottomStatusMessage"); finish(); })
+    .savePlayerSignups(currentName, selectedDates);
+}
+
+// Load signups for a selected name
+function loadSignupsForName(name){
+  topText.textContent="Loading..."; spinner.style.display='inline-block';
+  google.script.run.withSuccessHandler(data => {
+    renderLimitedDaysNote(serverCountsGlobal);
+    renderDatesTable(data, serverCountsGlobal);
+    topText.textContent="✅ Ready for Your Edits"; spinner.style.display='none';
+  }).loadSignupsForName(name);
+}
+
+// Dropdown change
+nameSelect.addEventListener('change',()=>{
+  const name = nameSelect.value.trim();
+  if(name){ currentName = name; loadSignupsForName(name); }
+  else { currentName = null; renderDatesTable([], serverCountsGlobal); topText.textContent=''; spinner.style.display='none'; }
+});
+
+// Page load
+window.onload = () => {
+  loadNames();
+
+  google.script.run.withSuccessHandler(dates => {
+    allDatesByMonth = dates;
+
+    google.script.run.withSuccessHandler(counts => {
+      serverCountsGlobal = counts;
+      renderLimitedDaysNote(serverCountsGlobal);
+      renderDatesTable([], serverCountsGlobal);
+    }).getServerCounts();
+  }).getAllDates();
+};
+
+// Load names function
+function loadNames() {
+  google.script.run.withSuccessHandler(names => {
+    nameSelect.innerHTML = '<option disabled selected value="">Select Name</option>';
+    names.forEach(n => {
+      const opt = document.createElement('option');
+      opt.value = n;
+      opt.textContent = n;
+      nameSelect.appendChild(opt);
+    });
+  }).getNames();
+}
+</script>
+
+
+
+
+
+</body>
+</html>
