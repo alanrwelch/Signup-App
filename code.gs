@@ -98,26 +98,46 @@ function getSignups() {
   return signups;
 }
 
+
 function loadSignupsForName(name) {
   logToBuffer(`loadSignupsForName called for: ${name}`);
-  const allSignups = getSignups();
-  const person = allSignups.find(entry => entry.name === name);
+  
+  const ss = SpreadsheetApp.openById(SIGNUP_SPREADSHEET_ID);
+  const sheet = ss.getSheetByName("Sheet1");
+  if (!sheet) throw new Error("Sheet not found");
 
-  if (person) {
-    logToBuffer(`Found signup data for ${name}`);
-    const signupDates = Object.keys(person.dates)
-      .filter(date => person.dates[date])
-      .map(dateStr => {
-        if (dateStr.includes('/')) return dateStr; // already MM/DD/YYYY
-        const parts = dateStr.split('-'); // yyyy-mm-dd
-        return `${parts[1].padStart(2,'0')}/${parts[2].padStart(2,'0')}/${parts[0]}`;
-      });
-    return signupDates;
-  } else {
-    logToBuffer(`No signup data found for ${name}`);
-    return [];
+  const headerRow = sheet.getRange(1, 2, 1, sheet.getLastColumn() - 1).getDisplayValues()[0];
+  const data = sheet.getRange(2, 2, sheet.getLastRow() - 1, sheet.getLastColumn() - 1).getDisplayValues();
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const cutoff = new Date(today);
+  cutoff.setMonth(cutoff.getMonth() + 3); // 3 months into the future
+
+  const signedUpDates = [];
+
+  for (let r = 0; r < data.length; r++) {
+    if (sheet.getRange(r + 2, 1).getValue() !== name) continue;
+    const row = data[r];
+    for (let c = 0; c < row.length; c++) {
+      const cell = row[c];
+      if (cell) {
+        const parts = headerRow[c].split('/');
+        if (parts.length !== 3) continue;
+        const dateObj = new Date(Number(parts[2]), Number(parts[0]) - 1, Number(parts[1]));
+        dateObj.setHours(0, 0, 0, 0);
+        if (dateObj <= cutoff) {
+          signedUpDates.push(headerRow[c]);
+        }
+      }
+    }
   }
+
+  logToBuffer(`Signed-up dates for ${name}: ${signedUpDates.join(", ")}`);
+  return signedUpDates;
 }
+
 
 function buildSignupEmailGrid(allDatesByMonth, signupMap, playerName) {
   const monthNames = [
@@ -125,7 +145,6 @@ function buildSignupEmailGrid(allDatesByMonth, signupMap, playerName) {
     "July","August","September","October","November","December"
   ];
 
-  // --- Shared helper functions ---
   function parseMDY(dateStr) {
     const [mm, dd, yyyy] = dateStr.split('/').map(Number);
     return new Date(yyyy, mm - 1, dd);
@@ -139,15 +158,14 @@ function buildSignupEmailGrid(allDatesByMonth, signupMap, playerName) {
     return 1 + Math.round(((tmp - week1)/86400000 - 3 + ((week1.getDay()+6)%7))/7);
   }
 
-  // --- Define minimum date (today + 2 days) ---
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  today.setHours(0,0,0,0);
   const minDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2);
 
-  // --- Determine which months to show (3 months total) ---
+  // Pick 3 months starting from current month
   const monthsToShow = [];
   for (let i = 0; i < 3; i++) {
-    const futureDate = new Date(minDate.getFullYear(), minDate.getMonth() + i);
+    const futureDate = new Date(today.getFullYear(), today.getMonth() + i);
     monthsToShow.push(monthNames[futureDate.getMonth()]);
   }
 
@@ -157,21 +175,11 @@ function buildSignupEmailGrid(allDatesByMonth, signupMap, playerName) {
     const monthDatesRaw = allDatesByMonth[monthName];
     if (!monthDatesRaw) return;
 
-    // Filter dates >= minDate and respecting cutoff (2 days before at 2pm)
-    const monthDates = monthDatesRaw.filter(d => {
-      const dateObj = parseMDY(d.date);
-
-      if (dateObj < minDate) return false;
-
-      const cutoff = new Date(dateObj);
-      cutoff.setDate(cutoff.getDate() - 2);
-      cutoff.setHours(14, 0, 0, 0);
-      return new Date().getTime() < cutoff.getTime();
-    }).sort((a,b) => parseMDY(a.date) - parseMDY(b.date));
-
+    // Sort all dates in the month (past & future)
+    const monthDates = monthDatesRaw.sort((a,b) => parseMDY(a.date) - parseMDY(b.date));
     if (!monthDates.length) return;
 
-    // --- Group by ISO week ---
+    // Group by ISO week
     const weeksMap = {};
     monthDates.forEach(d => {
       const dObj = parseMDY(d.date);
@@ -192,13 +200,26 @@ function buildSignupEmailGrid(allDatesByMonth, signupMap, playerName) {
 
     html += `<h3 style="margin-top:20px;">${monthName}</h3>`;
     html += `<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; text-align:center;">`;
-    html += `<thead><tr><th>Mondays</th><th>Wednesdays</th></tr></thead><tbody>`;
+    html += `<thead><tr><th>Monday</th><th>Wednesday</th></tr></thead><tbody>`;
 
     sortedWeekKeys.forEach(weekKey => {
       const week = weeksMap[weekKey];
       html += `<tr>`;
-      html += `<td style="font-size:1.1em;">${week.M ? week.M.date + ' ' + (signupMap[week.M.date] ? '✅' : '⬜️') : ''}</td>`;
-      html += `<td style="font-size:1.1em;">${week.W ? week.W.date + ' ' + (signupMap[week.W.date] ? '✅' : '⬜️') : ''}</td>`;
+
+      ['M','W'].forEach(type => {
+        if (week[type]) {
+          const date = week[type].date;
+          const isPast = parseMDY(date) < minDate;
+          const checked = signupMap[date] ? '✅' : '⬜️';
+          const bgColor = isPast ? '#eee' : '#fff'; // past grey, future white
+          const textColor = isPast ? '#333' : '#000';
+
+          html += `<td style="font-size:1.1em; background-color:${bgColor}; color:${textColor}">${date} ${checked}</td>`;
+        } else {
+          html += `<td></td>`;
+        }
+      });
+
       html += `</tr>`;
     });
 
@@ -207,6 +228,13 @@ function buildSignupEmailGrid(allDatesByMonth, signupMap, playerName) {
 
   return html;
 }
+
+
+
+
+
+
+
 
 
 function getLimitedDayCountsFromClient(limitedDaysKeys) {
@@ -422,17 +450,12 @@ function savePlayerSignups(playerName, signupArray) {
   }
 }
 
-
 function getAvailableDates() {
   logToBuffer("getAvailableDates called");
   const sheet = SpreadsheetApp.openById(SIGNUP_SPREADSHEET_ID).getSheetByName("Sheet1");
   if (!sheet) throw new Error("Sheet 'Sheet1' not found");
 
   const headerRow = sheet.getRange(1, 2, 1, sheet.getLastColumn() - 1).getDisplayValues()[0];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const cutoff = new Date(today);
-  cutoff.setDate(cutoff.getDate() + 2);
 
   const allDatesByMonth = {};
 
@@ -442,16 +465,16 @@ function getAvailableDates() {
 
     const parts = dateCell.split('/');
     if (parts.length !== 3) continue;
+
     const rawDate = new Date(Number(parts[2]), Number(parts[0]) - 1, Number(parts[1]));
     rawDate.setHours(0, 0, 0, 0);
-    if (rawDate < cutoff) continue;
 
     const day = rawDate.getDay();
-    const type = day === 1 ? 'M' : day === 3 ? 'W' : null;
+    const type = day === 1 ? 'M' : day === 3 ? 'W' : null; // Only Mondays and Wednesdays
     if (!type) continue;
 
     const monthLabel = Utilities.formatDate(rawDate, Session.getScriptTimeZone(), "MMMM");
-    const mdyDate = formatDateToString(rawDate);
+    const mdyDate = formatDateToString(rawDate); // returns "MM/DD/YYYY"
 
     if (!allDatesByMonth[monthLabel]) allDatesByMonth[monthLabel] = [];
     allDatesByMonth[monthLabel].push({ date: mdyDate, type });
@@ -461,32 +484,33 @@ function getAvailableDates() {
   return allDatesByMonth;
 }
 
-  function getAllDates() {
-    logToBuffer("getAllDates called");
-    return getAvailableDates();
-  }
+function getAllDates() {
+  logToBuffer("getAllDates called");
+  return getAvailableDates();
+}
 
-  // number of people signed up for the limited days
-  function getServerCounts() {
-    const ss = SpreadsheetApp.openById(SIGNUP_SPREADSHEET_ID);
-    const sheet = ss.getSheetByName("Sheet1");
-    const headerRow = 1; // Dates in row 1
-    const valueRow = 2;  // Values in row 2
 
-    const lastCol = sheet.getLastColumn();
-    const dateValues = sheet.getRange(headerRow, 1, 1, lastCol).getValues()[0];
-    const serverCountsRow = sheet.getRange(valueRow, 1, 1, lastCol).getValues()[0];
+// number of people signed up for the limited days
+function getServerCounts() {
+  const ss = SpreadsheetApp.openById(SIGNUP_SPREADSHEET_ID);
+  const sheet = ss.getSheetByName("Sheet1");
+  const headerRow = 1; // Dates in row 1
+  const valueRow = 2;  // Values in row 2
 
-    const serverCounts = {};
-    dateValues.forEach((dateStr, idx) => {
-      if (dateStr) {
-        // normalize key to MM/DD/YYYY
-        const key = Utilities.formatDate(new Date(dateStr), Session.getScriptTimeZone(), "MM/dd/yyyy");
-        serverCounts[key] = serverCountsRow[idx] || 0;
-        console.log(`• Date: ${key}, Server Count from sheet: ${serverCounts[key]}`);
-      }
-    });
+  const lastCol = sheet.getLastColumn();
+  const dateValues = sheet.getRange(headerRow, 1, 1, lastCol).getDisplayValues()[0];  // use display values
+  const serverCountsRow = sheet.getRange(valueRow, 1, 1, lastCol).getDisplayValues()[0]; // use display values
+
+  const serverCounts = {};
+  dateValues.forEach((dateStr, idx) => {
+    if (dateStr) {
+      const key = Utilities.formatDate(new Date(dateStr), Session.getScriptTimeZone(), "MM/dd/yyyy");
+      const count = parseInt(serverCountsRow[idx], 10) || 0;
+      serverCounts[key] = count;
+      console.log(`• Date: ${key}, Server Count: ${count}`);
+    }
+  });
 
     return serverCounts;
-  }
+}
 
