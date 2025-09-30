@@ -17,193 +17,95 @@
       text-align: center;
       margin-bottom: 10px;
     }
-    .image-container {
+    .notice {
       text-align: center;
-      margin-bottom: 30px;
-    }
-    .image-container img {
-      max-height: 100px;
-      margin: 0 15px;
-      vertical-align: middle;
-    }
-    #nameSelect {
-      width: 60%;
-      padding: 10px;
-      font-size: 1.2em;
-      margin-bottom: 20px;
-    }
-    .monthHeader {
+      font-size: 2em;
       font-weight: bold;
-      font-size: 1.3em;
-      margin-top: 25px;
-      margin-bottom: 10px;
-      border-bottom: 2px solid #004080;
-      padding-bottom: 4px;
+      color: red;
+      margin: 30px 0;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
+    .disabled-section {
+      opacity: 0.4;
+      pointer-events: none; /* disables clicking, selecting, etc. */
     }
-    th, td {
-      border: 1px solid #333;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background-color: #cceeff;
-    }
-    td label {
-      margin-left: 6px;
-    }
-    #saveBtn {
-      font-weight: bold;
-      font-size: 1.2em;
-      padding: 10px 20px;
-      cursor: pointer;
-    }
-    #btnSpinner, #topSpinner {
-      display: none;
-      border-radius: 50%;
-      width: 14px;
-      height: 14px;
-      animation: spin 0.9s linear infinite;
-      vertical-align: middle;
-    }
-    #btnSpinner {
-      border: 2px solid #f3f3f3;
-      border-top: 2px solid #333;
-      margin-left: 10px;
-    }
-    #topSpinner {
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid purple;
-      margin-left: 8px;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    #buttonBar {
-      margin: 20px 0;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      justify-content: center;
-    }
-    #buttonBar button {
-      padding: 8px 14px;
-      font-size: 1em;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    #statusMessage {
-      font-weight: bold;
-      text-align: center;
-      color: darkgreen;
-      margin: 10px 0 20px;
-      transition: opacity 0.5s ease;
-    }
-    @keyframes blink {
-      50% { opacity: 0; }
-    }
-    .blink {
-      animation: blink 1s step-start infinite;
-    }
-    
-    .checkbox {
-      display: inline-block;
-      width: 18px;
-      height: 18px;
-      border: 1px solid #333;
-      text-align: center;
-      line-height: 18px;
-      font-weight: bold;
-      margin-left: 5px;
-    }
-
-    .past-checked {
-      background-color: #eee;
-      color: #000;
-    }
-
-    table {
-      font-size: 1.3em; /* slightly larger table content, scales dates & checkboxes */
-    }
-
   </style>
-
 </head>
 <body>
 
-<div style="text-align: center;">
-  <h1>Springfield Senior Signups</h1>
-  <div style="font-weight: bold; color: blue; margin-top: -10px;">V 2.2</div>
+<!-- Big Notice -->
+<div class="notice">
+  SIGNUPS PAUSED FOR NOW <br><br>
+  Contact <b>Ken Dunnett</b> as before to manage your play
 </div>
 
-<!-- Blank vertical spacer -->
-<div style="height: 1em;"></div>
+<!-- Greyed-out / disabled original content -->
+<div class="disabled-section">
 
-<div class="image-container">
-  <img src="https://live.staticflickr.com/65535/54259105499_43c986c7ea_z.jpg" alt="GoogleGolf Scoring System Logo">
-  <img src="https://live.staticflickr.com/65535/54033042787_0126e057cd_w_d.jpg" alt="BT Logo">
+  <div style="text-align: center;">
+    <h1>Springfield Senior Signups</h1>
+    <div style="font-weight: bold; color: blue; margin-top: -10px;">V 2.3</div>
+  </div>
+
+  <!-- Blank vertical spacer -->
+  <div style="height: 1em;"></div>
+
+  <div class="image-container">
+    <img src="https://live.staticflickr.com/65535/54259105499_43c986c7ea_z.jpg" alt="GoogleGolf Scoring System Logo">
+    <img src="https://live.staticflickr.com/65535/54033042787_0126e057cd_w_d.jpg" alt="BT Logo">
+  </div>
+
+  <div id="instructions" style="margin: 1em 0; font-size: 1.1em;">
+    <b>1. Select your name. </b><br> 
+    <b>2. To "SIGNUP" for a day to play,</b> check the box for that day(s) play. <br> 
+    <b>3. To "SIGNOUT- Cancel a SIGNUP"</b>, uncheck the box for that day(s) to cancel. <br>
+    <b>4. To Save Your Selections & Email Them</b>, click the <b>Save & Email </b> button at the bottom. <br><br>
+
+    <span style="color: red; font-weight: bold; display: block; padding-left: 1.5em;">
+      For Monday play, signups/signouts must be in by the Saturday before 2pm!<br>
+      For Wednesday play, signup/signouts must be in by the Monday before 2pm!
+    </span><br>
+
+    You can always re-do your selections over time; the last submission is what is stored.<br><br>
+    <p><b>For last minute changes PAST THE DEADLINES</b> (sickness/etc.)-- ASAP email<br>
+      <span style="display: block; padding-left: 1.1em;">
+        Ken: kendunnett@comporium.net <br>
+        Alan: welch_misc@yahoo.com
+      </span>
+    </p>
+  </div>
+
+  <select id="nameSelect">
+    <option value="" disabled selected>Select Name</option>
+  </select>
+
+  <div id="topStatusMessage" style="color: purple; margin-bottom: 10px;">
+    <span id="topStatusText"></span><span id="topSpinner"></span>
+  </div>
+
+  <div id="buttonBar">
+    <button onclick="checkAllBoxesByType('all')">Check All Days</button>
+    <button onclick="checkAllBoxesByType('M')">Check All Mon.</button>
+    <button onclick="checkAllBoxesByType('W')">Check All Wedn.</button>
+    <button onclick="uncheckAllBoxes()">Uncheck All</button>
+  </div>
+
+  <!-- Limited Player Days (red) -->
+  <div id="limitedDaysNote" style="text-align:center; margin-bottom:32px;"></div>
+
+  <!-- Note about past dates (black) -->
+  <div id="pastDatesNote" style="text-align:center; font-style:italic; color:black; font-size:1.2em; margin-bottom:8px;">
+    Past dates are shaded white and are read-only (not editable)
+  </div>
+
+  <div id="datesGrid"></div>
+
+  <button id="saveBtn" onclick="saveCurrentSelections()">
+    Save & Email <span id="btnSpinner"></span>
+  </button>
+
+  <div id="bottomStatusMessage" style="color: purple; margin-top: 8px; font-size: 1.5em;"></div>
+
 </div>
-
-
-<div id="instructions" style="margin: 1em 0; font-size: 1.1em;">
-  <b>1. Select your name. </b><br> 
-  <b>2. To "SIGNUP" for a day to play,</b> check the box for that day(s) play. <br> 
-  <b>3. To "SIGNOUT- Cancel a SIGNUP"</b>, uncheck the box for that day(s) to cancel. <br>
-  <b>4. To Save Your Selections & Email Them</b>, click the <b>Save & Email </b> button at the bottom. <br><br>
-
-  <span style="color: red; font-weight: bold; display: block; padding-left: 1.5em;">
-    For Monday play, signups/signouts must be in by the Saturday before 2pm!<br>
-    For Wednesday play, signup/signouts must be in by the Monday before 2pm!
-  </span><br>
-
-  You can always re-do your selections over time; the last submission is what is stored.<br><br>
-  <p><b>For last minute changes PAST THE DEADLINES</b> (sickness/etc.)-- ASAP email<br>
-    <span style="display: block; padding-left: 1.1em;">
-      Ken: kendunnett@comporium.net <br>
-      Alan: welch_misc@yahoo.com
-    </span>
-  </p>
-</div>
-
-<select id="nameSelect">
-  <option value="" disabled selected>Select Name</option>
-</select>
-
-<div id="topStatusMessage" style="color: purple; margin-bottom: 10px;">
-  <span id="topStatusText"></span><span id="topSpinner"></span>
-</div>
-
-<div id="buttonBar">
-  <button onclick="checkAllBoxesByType('all')">Check All Days</button>
-  <button onclick="checkAllBoxesByType('M')">Check All Mon.</button>
-  <button onclick="checkAllBoxesByType('W')">Check All Wedn.</button>
-  <button onclick="uncheckAllBoxes()">Uncheck All</button>
-</div>
-
-
-<!-- Limited Player Days (red) -->
-<div id="limitedDaysNote" style="text-align:center; margin-bottom:32px;"></div>
-
-<!-- Note about past dates (black) -->
-<div id="pastDatesNote" style="text-align:center; font-style:italic; color:black; font-size:1.2em; margin-bottom:8px;">
-  Past dates are shaded white and are read-only (not editable)
-</div>
-
-
-<div id="datesGrid"></div>
-
-
-<button id="saveBtn" onclick="saveCurrentSelections()">
-  Save & Email <span id="btnSpinner"></span>
-</button>
-
-<div id="bottomStatusMessage" style="color: purple; margin-top: 8px; font-size: 1.5em;"></div>
-
 
 
 <script>
